@@ -1,1 +1,401 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MensaToGo</title>
+<style>
+  :root {
+    --bg: #f6f7f4; --card: #ffffff; --text: #1f2a24; --muted: #66736b;
+    --accent: #2f8f5b; --accent-d: #236f46; --line: #e3e7e2; --warn: #c2410c;
+    --veg: #2f8f5b; --vegan: #15803d; --meat: #b45309;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #121715; --card: #1b2320; --text: #e8efea; --muted: #9aa8a0;
+            --accent: #3fb277; --accent-d: #2f8f5b; --line: #2a3530; --warn: #fb923c; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+         background: var(--bg); color: var(--text); line-height: 1.45; }
+  header { padding: 22px 16px 10px; max-width: 1000px; margin: 0 auto; }
+  header h1 { margin: 0; font-size: 1.6rem; }
+  header p { margin: 4px 0 0; color: var(--muted); }
+  .badge { display: inline-block; font-size: .72rem; padding: 2px 8px; border-radius: 99px;
+           background: var(--warn); color: #fff; margin-left: 8px; vertical-align: middle; }
+  .status { display: inline-block; font-size: .78rem; margin-top: 8px; padding: 2px 10px;
+            border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
+  .status.on { color: var(--accent); border-color: var(--accent); }
+  .status.off { color: var(--warn); border-color: var(--warn); }
+  main { max-width: 1000px; margin: 0 auto; padding: 0 16px 60px;
+         display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start; }
+  @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  h2 { font-size: 1.05rem; margin: 0 0 12px; }
+  .tabs, .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  button { font: inherit; cursor: pointer; }
+  .tab, .chip { border: 1px solid var(--line); background: var(--card); color: var(--text);
+                padding: 7px 13px; border-radius: 99px; }
+  .tab.active, .chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .dish { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0;
+          border-top: 1px solid var(--line); }
+  .list > .dish:first-child { border-top: 0; }
+  .dish h3 { margin: 0; font-size: 1rem; }
+  .dish .desc { color: var(--muted); font-size: .9rem; }
+  .tags { margin-top: 4px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .tag { font-size: .72rem; padding: 1px 8px; border-radius: 99px; color: #fff; }
+  .tag.Vegan { background: var(--vegan); } .tag.Vegetarisch { background: var(--veg); }
+  .tag.Fleisch { background: var(--meat); } .tag.other { background: var(--muted); }
+  .allergens { font-size: .75rem; color: var(--muted); }
+  .drinks { margin-top: 22px; padding-top: 14px; border-top: 2px solid var(--line); }
+  .drinks h2 { margin-bottom: 4px; }
+  .side { text-align: right; min-width: 108px; }
+  .price { font-weight: 700; }
+  .qty { display: inline-flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .qty button { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line);
+                background: var(--card); color: var(--text); font-size: 1.1rem; line-height: 1; }
+  .qty button.plus { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .qty span { min-width: 18px; text-align: center; }
+  label { display: block; font-size: .85rem; color: var(--muted); margin: 12px 0 4px; }
+  input, select { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--line);
+                  background: var(--bg); color: var(--text); font: inherit; }
+  .line { display: flex; justify-content: space-between; gap: 8px; padding: 4px 0; font-size: .95rem; }
+  .total { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 10px; font-weight: 700; }
+  .submit { width: 100%; margin-top: 14px; padding: 12px; border: 0; border-radius: 10px;
+            background: var(--accent); color: #fff; font-weight: 600; }
+  .submit:hover:not(:disabled) { background: var(--accent-d); }
+  .submit:disabled { opacity: .5; cursor: not-allowed; }
+  .msg { margin-top: 12px; padding: 10px 12px; border-radius: 10px; font-size: .92rem; }
+  .msg.ok { background: rgba(47,143,91,.15); border: 1px solid var(--accent); }
+  .msg.err { background: rgba(194,65,12,.12); border: 1px solid var(--warn); }
+  .msg button { margin-top: 8px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--warn);
+                background: transparent; color: var(--text); }
+  .muted { color: var(--muted); font-size: .9rem; }
+  .hist { margin-top: 20px; }
+  .hist .h { padding: 8px 0; border-top: 1px solid var(--line); font-size: .88rem; }
+  .link { background: none; border: 0; color: var(--muted); text-decoration: underline; padding: 0; margin-top: 8px; }
+  footer { text-align: center; color: var(--muted); font-size: .8rem; padding: 0 16px 30px; }
+</style>
+</head>
+<body>
 
+<header>
+  <h1>🍽️ MensaToGo <span class="badge">Schulprojekt</span></h1>
+  <p>Wähle deinen Tag, stelle Essen und Getränke zusammen und wähle eine Abholzeit.</p>
+  <span class="status" id="status">Verbinde …</span>
+</header>
+
+<main>
+  <section class="panel">
+    <h2>Speiseplan</h2>
+    <div class="tabs" id="tabs"></div>
+    <div class="filters" id="filters">
+      <button class="chip active" data-f="all">Alle</button>
+      <button class="chip" data-f="Vegetarisch">Vegetarisch</button>
+      <button class="chip" data-f="Vegan">Vegan</button>
+    </div>
+    <div id="menu" class="list"><p class="muted">Lade Speiseplan …</p></div>
+    <div id="drinks" class="drinks list" hidden></div>
+    <p class="muted" style="margin-top:14px">Zutaten können abweichen. Bei Allergien bitte die Küche fragen.</p>
+  </section>
+
+  <aside>
+    <div class="panel">
+      <h2>🛒 Dein Warenkorb</h2>
+      <div id="cart"><p class="muted">Noch nichts ausgewählt.</p></div>
+
+      <label for="name">Dein Name</label>
+      <input id="name" maxlength="40" placeholder="z. B. Mia Müller" autocomplete="name">
+
+      <label for="pickup">Abholzeit</label>
+      <select id="pickup"></select>
+
+      <button class="submit" id="submit" disabled>Bestellung absenden</button>
+      <div id="msg"></div>
+    </div>
+
+    <div class="panel hist" id="histBox" hidden>
+      <h2>Meine letzten Bestellungen</h2>
+      <div id="hist"></div>
+      <button class="link" id="clearHist">Verlauf löschen</button>
+    </div>
+  </aside>
+</main>
+
+<footer>MensaToGo · Schulprojekt – keine echte Bestellung, keine echte Bezahlung</footer>
+
+<script>
+/* =========================================================================
+   EINZIGE EINSTELLUNG: Web-App-URL aus Google Apps Script hier einfügen.
+   Sie beginnt mit https://script.google.com/macros/s/ und endet auf /exec
+   Leer lassen = Demo-Modus mit Beispieldaten (ohne Google Sheet).
+   ========================================================================= */
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwCjTnYrDDDdtV0mcJNgF5jx_yjNmXMTmZdA67Adck1A9X_Kk_UKfiYecO98abhOkm-/exec';
+
+const SLOTS = ['11:30','11:45','12:00','12:15','12:30','12:45','13:00','13:15','13:30'];
+const WEEKDAYS = ['So','Mo','Di','Mi','Do','Fr','Sa'];
+
+let menu = [];
+let drinks = [];
+let currentDay = null;
+let filter = 'all';
+const carts = {};            // { 'yyyy-mm-dd': { id: qty } }
+
+const $ = id => document.getElementById(id);
+const eur = n => Number(n).toFixed(2).replace('.', ',') + ' €';
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const iso = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+const findItem = id => menu.find(m => m.id === id) || drinks.find(d => d.id === id);
+const store = {
+  get(k, def) { try { const v = JSON.parse(localStorage.getItem(k)); return v === null || v === undefined ? def : v; } catch (e) { return def; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+
+/* ---------- Verbindung zum Google Sheet ---------- */
+const URL_OK = /^https:\/\/script\.google\.com\/macros\/s\/[^\/?#]+\/exec$/;
+
+async function api(params) {
+  if (!URL_OK.test(SCRIPT_URL)) {
+    throw new Error('SCRIPT_URL ist ungültig. Sie muss mit https://script.google.com/macros/s/ beginnen und auf /exec enden (nicht /dev).');
+  }
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 20000);
+  try {
+    const res = await fetch(SCRIPT_URL + '?' + params, { signal: ctrl.signal });
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); }
+    catch (e) { throw new Error('Die Antwort ist kein JSON. Meist ist die Web-App nicht auf „Zugriff: Jeder“ gestellt, die URL falsch oder die neue Version nicht bereitgestellt.'); }
+    return data;
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error('Zeitüberschreitung: Der Server antwortet nicht.');
+    if (e instanceof TypeError) throw new Error('Keine Verbindung zum Server. URL prüfen und die Web-App neu bereitstellen (Ausführen als: Ich, Zugriff: Jeder).');
+    throw e;
+  } finally { clearTimeout(timer); }
+}
+
+async function loadMenu() {
+  if (!SCRIPT_URL) { menu = demoMenu(); drinks = demoDrinks(); return; }
+  const data = await api('action=menu');
+  if (!data.ok) throw new Error(data.error || 'Fehler beim Laden des Speiseplans.');
+  menu = Array.isArray(data.menu) ? data.menu : [];
+  drinks = Array.isArray(data.drinks) ? data.drinks : [];
+}
+
+function setStatus(kind, text) { const s = $('status'); s.className = 'status ' + kind; s.textContent = text; }
+
+/* ---------- Demo-Daten ---------- */
+function demoMenu() {
+  const dishes = [
+    ['Spaghetti Bolognese','Hackfleischsauce, Parmesan',3.8,'Fleisch','Gluten, Milch'],
+    ['Gemüsecurry','Kokosmilch, Reis',3.5,'Vegan','Sellerie'],
+    ['Käsespätzle','Röstzwiebeln, Salat',3.6,'Vegetarisch','Gluten, Eier, Milch'],
+    ['Hähnchenschnitzel','Pommes, Zitrone',4.2,'Fleisch','Gluten, Eier'],
+    ['Linsensuppe','Brötchen dazu',2.5,'Vegan','Gluten, Sellerie'],
+  ];
+  const out = []; let id = 1; let d = new Date(); let n = 0;
+  while (n < 5) {
+    if (d.getDay() !== 0 && d.getDay() !== 6) {
+      for (let i = 0; i < 3; i++) {
+        const s = dishes[(n + i) % dishes.length];
+        out.push({ id: String(id++), date: iso(d), name: s[0], desc: s[1], price: s[2], category: s[3], allergens: s[4] });
+      }
+      n++;
+    }
+    d = new Date(d.getTime() + 864e5);
+  }
+  return out;
+}
+
+function demoDrinks() {
+  return [
+    ['Wasser still','0,5 l',1.0], ['Wasser sprudelnd','0,5 l',1.0], ['Apfelschorle','0,5 l',1.5],
+    ['Orangensaft','0,3 l',1.8], ['Eistee Pfirsich','0,5 l',1.7], ['Cola','0,33 l',1.9], ['Kakao','0,25 l',1.4],
+  ].map((d, i) => ({ id: 'G' + (i + 1), date: '', name: d[0], desc: d[1], price: d[2], category: 'Getränk', allergens: '' }));
+}
+
+/* ---------- Anzeige ---------- */
+function days() {
+  const today = iso(new Date());
+  return [...new Set(menu.map(m => m.date))].filter(d => d >= today).sort();
+}
+
+function renderTabs() {
+  const ds = days();
+  if (!ds.length) {
+    currentDay = null;
+    $('tabs').innerHTML = '';
+    return false;
+  }
+  if (!currentDay || !ds.includes(currentDay)) currentDay = ds[0];
+  $('tabs').innerHTML = ds.map(d => {
+    const dt = new Date(d + 'T12:00:00');
+    const label = WEEKDAYS[dt.getDay()] + ' ' + dt.getDate() + '.' + (dt.getMonth()+1) + '.';
+    return `<button class="tab ${d === currentDay ? 'active' : ''}" data-d="${esc(d)}">${label}</button>`;
+  }).join('');
+  return true;
+}
+
+function dishRow(m) {
+  const q = (carts[currentDay] || {})[m.id] || 0;
+  const isDrink = m.category === 'Getränk';
+  const cls = ['Vegan','Vegetarisch','Fleisch'].includes(m.category) ? m.category : 'other';
+  const tags = isDrink ? '' : `<div class="tags">
+          ${m.category ? `<span class="tag ${cls}">${esc(m.category)}</span>` : ''}
+          ${m.allergens ? `<span class="allergens">Allergene: ${esc(m.allergens)}</span>` : ''}
+        </div>`;
+  return `<div class="dish">
+      <div>
+        <h3>${esc(m.name)}</h3>
+        <div class="desc">${esc(m.desc)}</div>
+        ${tags}
+      </div>
+      <div class="side">
+        <div class="price">${eur(m.price)}</div>
+        <div class="qty">
+          <button data-act="minus" data-id="${esc(m.id)}" aria-label="weniger">−</button>
+          <span>${q}</span>
+          <button class="plus" data-act="plus" data-id="${esc(m.id)}" aria-label="mehr">+</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderMenu() {
+  if (!currentDay) {
+    $('menu').innerHTML = '<p class="muted">Aktuell ist kein Speiseplan verfügbar. (Im Sheet-Blatt „Speiseplan“ Gerichte mit heutigem oder späterem Datum eintragen.)</p>';
+    return;
+  }
+  const items = menu.filter(m => m.date === currentDay)
+    .filter(m => filter === 'all' || m.category === filter || (filter === 'Vegetarisch' && m.category === 'Vegan'));
+  $('menu').innerHTML = items.length ? items.map(dishRow).join('') : '<p class="muted">Keine Gerichte für diese Auswahl.</p>';
+}
+
+function renderDrinks() {
+  const box = $('drinks');
+  box.hidden = !(drinks.length && currentDay);
+  if (box.hidden) return;
+  box.innerHTML = '<h2>🥤 Getränke</h2>' + drinks.map(dishRow).join('');
+}
+
+function cartLines() {
+  const cart = carts[currentDay] || {};
+  return Object.entries(cart).filter(([, q]) => q > 0).map(([id, q]) => {
+    const m = findItem(id); return m ? { m, q } : null;
+  }).filter(Boolean);
+}
+
+function renderCart() {
+  const lines = cartLines();
+  const total = lines.reduce((s, l) => s + l.m.price * l.q, 0);
+  $('cart').innerHTML = lines.length
+    ? lines.map(l => `<div class="line"><span>${l.q}× ${esc(l.m.name)}</span><span>${eur(l.m.price * l.q)}</span></div>`).join('')
+      + `<div class="line total"><span>Gesamt</span><span>${eur(total)}</span></div>`
+    : '<p class="muted">Noch nichts ausgewählt.</p>';
+  updateSubmit();
+}
+
+function updateSubmit() {
+  $('submit').disabled = !(cartLines().length && $('name').value.trim() && $('pickup').value);
+}
+
+function renderHistory() {
+  const h = store.get('mensa_orders', []);
+  $('histBox').hidden = !h.length;
+  $('hist').innerHTML = h.slice(0, 5).map(o =>
+    `<div class="h"><b>${esc(o.nr)}</b> · ${esc(o.date)} · ${esc(o.pickup)} Uhr<br>
+     <span class="muted">${esc(o.text)} – ${eur(o.total)}</span></div>`).join('');
+}
+
+function refresh() { renderTabs(); renderMenu(); renderDrinks(); renderCart(); }
+
+function showMsg(type, html) { $('msg').innerHTML = html ? `<div class="msg ${type}">${html}</div>` : ''; }
+
+/* ---------- Bestellen ---------- */
+async function submitOrder() {
+  const lines = cartLines();
+  if (!lines.length) return;
+  const items = lines.map(l => ({ id: l.m.id, qty: l.q }));
+  const payload = { name: $('name').value.trim(), date: currentDay, pickup: $('pickup').value, items };
+  const btn = $('submit');
+  btn.disabled = true; btn.textContent = 'Wird gesendet …';
+  showMsg('', '');
+  try {
+    let result;
+    if (!SCRIPT_URL) {
+      await new Promise(r => setTimeout(r, 500));
+      const total = lines.reduce((s, l) => s + l.m.price * l.q, 0);
+      result = { ok: true, orderNr: 'DEMO-' + Math.floor(Math.random() * 9000 + 1000), total };
+    } else {
+      // Bestellung als GET-Anfrage: funktioniert von GitHub Pages ohne CORS-Probleme
+      result = await api('action=order&data=' + encodeURIComponent(JSON.stringify(payload)));
+    }
+    if (!result.ok) throw new Error(result.error || 'Unbekannter Fehler');
+
+    const text = lines.map(l => l.q + '× ' + l.m.name).join(', ');
+    const hist = store.get('mensa_orders', []);
+    hist.unshift({ nr: result.orderNr, date: currentDay, pickup: payload.pickup, text, total: result.total });
+    store.set('mensa_orders', hist.slice(0, 20));
+    store.set('mensa_name', payload.name);
+
+    carts[currentDay] = {};
+    refresh(); renderHistory();
+    showMsg('ok', `✅ Bestellt! Deine Nummer: <b>${esc(result.orderNr)}</b> – Abholung um ${esc(payload.pickup)} Uhr. Guten Appetit!`);
+  } catch (e) {
+    showMsg('err', '⚠️ ' + esc(e.message || 'Senden fehlgeschlagen. Bitte erneut versuchen.'));
+  } finally {
+    btn.textContent = 'Bestellung absenden';
+    updateSubmit();
+  }
+}
+
+/* ---------- Events ---------- */
+function onQtyClick(e) {
+  const b = e.target.closest('button[data-act]'); if (!b || !currentDay) return;
+  const cart = carts[currentDay] = carts[currentDay] || {};
+  const q = cart[b.dataset.id] || 0;
+  cart[b.dataset.id] = b.dataset.act === 'plus' ? Math.min(10, q + 1) : Math.max(0, q - 1);
+  renderMenu(); renderDrinks(); renderCart();
+}
+
+$('tabs').addEventListener('click', e => {
+  const b = e.target.closest('.tab'); if (!b) return;
+  currentDay = b.dataset.d; showMsg('', ''); refresh();
+});
+$('filters').addEventListener('click', e => {
+  const b = e.target.closest('.chip'); if (!b) return;
+  filter = b.dataset.f;
+  document.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c === b));
+  renderMenu();
+});
+$('menu').addEventListener('click', e => {
+  if (e.target.closest('#retry')) { init(); return; }
+  onQtyClick(e);
+});
+$('drinks').addEventListener('click', onQtyClick);
+$('name').addEventListener('input', updateSubmit);
+$('pickup').addEventListener('change', updateSubmit);
+$('submit').addEventListener('click', submitOrder);
+$('clearHist').addEventListener('click', () => { store.set('mensa_orders', []); renderHistory(); });
+
+/* ---------- Start ---------- */
+async function init() {
+  setStatus('', 'Verbinde …');
+  $('menu').innerHTML = '<p class="muted">Lade Speiseplan …</p>';
+  try {
+    await loadMenu();
+    setStatus(SCRIPT_URL ? 'on' : 'off', SCRIPT_URL ? '● Mit Google Sheet verbunden' : '● Demo-Modus (keine Verbindung zum Sheet)');
+    refresh();
+  } catch (e) {
+    setStatus('off', '● Keine Verbindung');
+    $('drinks').hidden = true;
+    $('menu').innerHTML = `<div class="msg err">Speiseplan konnte nicht geladen werden:<br>${esc(e.message)}<br><button id="retry">Erneut versuchen</button></div>`;
+  }
+}
+
+$('pickup').innerHTML = SLOTS.map(s => `<option value="${s}">${s} Uhr</option>`).join('');
+$('name').value = store.get('mensa_name', '');
+renderHistory();
+init();
+</script>
+</body>
+</html>
